@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --status-green: #10b981;
+    --status-amber: #f59e0b;
+    --status-red:   #ef4444;
+  }
+
+  html { @apply antialiased; }
+  body { @apply font-sans text-slate-900 bg-slate-50 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300; }
+  * { @apply box-border; }
+}
+
+@layer components {
+  /* ── Status text helpers ── */
+  .status-green  { @apply text-emerald-600 dark:text-emerald-400; }
+  .status-amber  { @apply text-amber-500   dark:text-amber-400; }
+  .status-red    { @apply text-red-500     dark:text-red-400; }
+
+  /* ── Card shell ── */
+  .card {
+    @apply bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm;
+  }
+
+  /* ── Vital card (large) ── */
+  .vital-card {
+    @apply card p-5 flex flex-col justify-between transition-all duration-200;
+  }
+
+  /* ── Pulse dot ── */
+  .pulse-dot {
+    @apply inline-block w-2.5 h-2.5 rounded-full;
+    animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  }
+
+  /* ── Mono numerals ── */
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Section header ── */
+  .section-header {
+    @apply text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3;
+  }
+
+  /* ── Nav item ── */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400
+           hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800
+           transition-all duration-150 cursor-pointer;
+  }
+  .nav-item.active {
+    @apply text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50;
+  }
+
+  /* ── Alert row ── */
+  .alert-row {
+    @apply flex items-start gap-3 p-3 rounded-xl border text-sm transition-all;
+  }
+  .alert-row.critical {
+    @apply border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30;
+    animation: flash-border 1.2s ease-in-out infinite;
+  }
+  .alert-row.warning {
+    @apply border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30;
+  }
+
+  /* ── Patient grid card ── */
+  .patient-tile {
+    @apply card p-4 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200;
+  }
+
+  /* ── Badge ── */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+  }
+  .badge-stable   { @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300; }
+  .badge-warning  { @apply bg-amber-100   text-amber-700   dark:bg-amber-900/50   dark:text-amber-300; }
+  .badge-critical { @apply bg-red-100     text-red-700     dark:bg-red-900/50     dark:text-red-300; }
+
+  /* ── Gauge container ── */
+  .gauge-wrap { @apply relative w-full flex items-center justify-center; }
+
+  /* ── Scrollbar ── */
+  .custom-scroll::-webkit-scrollbar { width: 4px; }
+  .custom-scroll::-webkit-scrollbar-track { @apply bg-transparent; }
+  .custom-scroll::-webkit-scrollbar-thumb { @apply bg-slate-200 dark:bg-slate-700 rounded-full; }
+
+  /* ── Table ── */
+  .data-table { @apply w-full text-sm border-collapse; }
+  .data-table th { @apply text-left text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 py-2 px-3 border-b border-slate-100 dark:border-slate-800; }
+  .data-table td { @apply py-2 px-3 border-b border-slate-50 dark:border-slate-800/60 text-slate-700 dark:text-slate-300; }
+  .data-table tr:hover td { @apply bg-slate-50 dark:bg-slate-800/50; }
+}
+
+@layer utilities {
+  /* ── Animations ── */
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 currentColor; opacity: 0.8; }
+    70%  { box-shadow: 0 0 0 6px transparent; opacity: 0; }
+    100% { box-shadow: 0 0 0 0 transparent; opacity: 0; }
+  }
+
+  @keyframes flash-border {
+    0%, 100% { border-color: rgb(254 202 202); background-color: rgb(254 242 242 / 0.4); }
+    50%       { border-color: rgb(239 68  68);  background-color: rgb(254 202 202 / 0.3); }
+  }
+
+  @keyframes slide-in-right {
+    from { transform: translateX(20px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+
+  @keyframes count-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+
+  @keyframes beep-flash {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+
+  .animate-slide-in  { animation: slide-in-right 0.3s ease-out; }
+  .animate-count-up  { animation: count-up 0.4s ease-out; }
+  .animate-spin-slow { animation: spin-slow 2s linear infinite; }
+  .animate-beep      { animation: beep-flash 0.6s ease-in-out 3; }
+
+  /* dark-mode chart grid line */
+  .dark .recharts-cartesian-grid line { stroke: #1e293b !important; }
+  .dark .recharts-text { fill: #94a3b8 !important; }
+}

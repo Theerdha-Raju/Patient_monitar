@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COVID-19 Patient Health Monitor | Real-Time Telemetry</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Chart.js for smooth medical time-series graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Top Global Navigation Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+      </div>
+      <div class="brand-titles">
+        <h1>COVID-19 Patient Health Monitor</h1>
+        <div class="brand-sub">Patient Isolation Ward Telemetry • ESP32 IoT & PostgreSQL Gateway</div>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="status-pill" id="connectionStatusPill">
+        <span class="status-dot pulsing"></span>
+        <span id="connectionStatusText">Connecting to Gateway...</span>
+      </div>
+      <div class="db-pill">
+        <span class="db-dot"></span>
+        <span>PostgreSQL 16 Connected</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="audio-toggle-btn" id="audioToggleBtn" title="Toggle Clinical Alarm Audio">
+        <svg id="audioIconOn" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        <svg id="audioIconOff" class="icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <line x1="23" y1="9" x2="17" y2="15"></line>
+          <line x1="17" y1="9" x2="23" y2="15"></line>
+        </svg>
+        <span id="audioStatusText">Alarm Audio: Active</span>
+      </button>
+
+      <button class="export-btn" id="exportCsvBtn" title="Export Telemetry to CSV">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Export CSV</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-main">
+    <!-- Active Critical Alert Banner (Appears dynamically) -->
+    <div id="criticalEmergencyBanner" class="emergency-banner hidden">
+      <div class="emergency-content">
+        <div class="emergency-icon-pulse">⚠️</div>
+        <div class="emergency-text">
+          <h3 id="emergencyBannerTitle">CRITICAL CLINICAL ALERT</h3>
+          <p id="emergencyBannerDesc">SpO2 dropped below critical threshold. Immediate clinician intervention required!</p>
+        </div>
+      </div>
+      <div class="emergency-actions">
+        <button id="resolveEmergencyBtn" class="btn-ack">Acknowledge & Silence</button>
+      </div>
+    </div>
+
+    <!-- Patient Ward Selector Tabs -->
+    <section class="patient-selector-section">
+      <div class="section-label">PATIENT ISOLATION ROOMS</div>
+      <div class="patient-tabs" id="patientTabsContainer">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- Patient Profile & Clinical Summary Card -->
+    <section class="patient-profile-card">
+      <div class="profile-left">
+        <div class="avatar-ring" id="patientAvatarRing">
+          <span class="patient-initials" id="patientInitials">ER</span>
+        </div>
+        <div class="profile-info">
+          <div class="profile-name-row">
+            <h2 id="patientName">Elena Rostova</h2>
+            <span class="badge" id="patientStatusBadge">ACTIVE MONITORING</span>
+            <span class="risk-badge risk-moderate" id="patientRiskBadge">MODERATE RISK</span>
+          </div>
+          <div class="profile-meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">PATIENT ID</span>
+              <span class="meta-val" id="patientId">PAT-101</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">ROOM / BED</span>
+              <span class="meta-val" id="patientRoom">Isolation Ward 301</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">AGE / GENDER</span>
+              <span class="meta-val" id="patientDemographics">46 yrs • Female</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">MONITORING PROGRESS</span>
+              <span class="meta-val highlight" id="patientMonitoringDay">Day 6</span>
+            </div>
+            <div class="meta-item full-width">
+              <span class="meta-label">COMORBIDITIES & COVID NOTES</span>
+              <span class="meta-val" id="patientNotes">Mild Asthma, Post-Covid Productive Cough. Vitals Monitored via ESP32.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-right">
+        <div class="device-telemetry-box">
+          <div class="box-title">IoT Hardware Telemetry Node</div>
+          <div class="device-row">
+            <span class="device-chip">ESP32-WROOM-32</span>
+            <span class="device-chip">MAX30102 (I2C)</span>
+            <span class="device-chip">DS18B20 (1-Wire)</span>
+          </div>
+          <div class="device-stats">
+            <div class="stat-pair">
+              <span>Battery:</span>
+              <strong id="deviceBattery">94%</strong>
+            </div>
+            <div class="stat-pair">
+              <span>Node ID:</span>
+              <strong id="deviceId">ESP32_NODE_01</strong>
+            </div>
+            <div class="stat-pair">
+              <span>Last Ingest:</span>
+              <strong id="deviceLastSeen">Just now</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Primary Vital Signs Metric Grid -->
+    <section class="vitals-grid">
+      <!-- 1. SpO2 Blood Oxygen Card -->
+      <div class="vital-card spo2-card" id="cardSpO2">
+        <div class="card-glow"></div>
+        <div class="card-header">
+          <div class="vital-title">
+            <span class="vital-icon">🫁</span>
+            <span>Blood Oxygen (SpO2)</span>
+          </div>
+          <span class="vital-condition-badge" id="spo2Condition">NORMAL</span>
+        </div>
+        <div class="card-body">
+          <div class="vital-display">
+            <span class="vital-value" id="valSpO2">96.5</span>
+            <span class="vital-unit">%</span>
+          </div>
+          <div class="vital-subtext">
+            <span>Silent Hypoxia Clinical Watch</span>
+            <span class="target-range">Goal: ≥ 95%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar" id="spo2Bar" style="width: 96.5%;"></div>
+          </div>
+          <div class="threshold-markers">
+            <span class="marker critical">90% Severe</span>
+            <span class="marker warning">94% Hypoxemia</span>
+            <span class="marker normal">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Pulse / Heart Rate Card -->
+      <div class="vital-card hr-card" id="cardHeartRate">
+        <div class="card-glow"></div>
+        <div class="card-header">
+          <div class="vital-title">
+            <span class="vital-icon pulsing-heart">❤️</span>
+            <span>Pulse / Heart Rate</span>
+          </div>
+          <span class="vital-condition-badge" id="hrCondition">NORMAL SINUS</span>
+        </div>
+        <div class="card-body">
+          <div class="vital-display">
+            <span class="vital-value" id="valHeartRate">78</span>
+            <span class="vital-unit">BPM</span>
+          </div>
+          <!-- Live Canvas Photoplethysmogram (PPG) Waveform -->
+          <div class="waveform-container">
+            <canvas id="ppgWaveformCanvas" height="48"></canvas>
+            <span class="live-wave-badge">LIVE PPG</span>
+          </div>
+          <div class="vital-subtext">
+            <span>Resting Cardiac Rhythm</span>
+            <span class="target-range">Range: 60 - 100</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Body Temperature Card -->
+      <div class="vital-card temp-card" id="cardTemp">
+        <div class="card-glow"></div>
+        <div class="card-header">
+          <div class="vital-title">
+            <span class="vital-icon">🌡️</span>
+            <span>Core Body Temperature</span>
+          </div>
+          <div class="temp-unit-toggle">
+            <button id="btnCelsius" class="active">°C</button>
+            <button id="btnFahrenheit">°F</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="vital-display">
+            <span class="vital-value" id="valTemp">37.2</span>
+            <span class="vital-unit" id="unitTemp">°C</span>
+          </div>
+          <div class="vital-subtext">
+            <span id="tempCondition">Normal / Afebrile</span>
+            <span class="target-range">Fever Alert: > 37.8°C</span>
+          </div>
+          <div class="temp-scale-visual">
+            <div class="temp-indicator-pin" id="tempPin" style="left: 45%;"></div>
+            <div class="scale-bar"></div>
+          </div>
+          <div class="scale-labels">
+            <span>36.0°</span>
+            <span>37.5°</span>
+            <span>38.5°+</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Respiration Rate Card -->
+      <div class="vital-card resp-card" id="cardResp">
+        <div class="card-glow"></div>
+        <div class="card-header">
+          <div class="vital-title">
+            <span class="vital-icon breathing-lung">💨</span>
+            <span>Respiration Rate</span>
+          </div>
+          <span class="vital-condition-badge" id="respCondition">STABLE</span>
+        </div>
+        <div class="card-body">
+          <div class="vital-display">
+            <span class="vital-value" id="valResp">18</span>
+            <span class="vital-unit">RPM</span>
+          </div>
+          <div class="vital-subtext">
+            <span>Breaths / Minute</span>
+            <span class="target-range">Norm: 12 - 20</span>
+          </div>
+          <div class="resp-visual-wave">
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Time-Series Charts & Live Graphs -->
+    <section class="charts-section">
+      <div class="chart-card main-chart-card">
+        <div class="chart-header">
+          <div class="chart-title">
+            <span class="chart-icon">📈</span>
+            <h3>Continuous Vitals Trend (SpO2 & Heart Rate)</h3>
+          </div>
+          <div class="chart-controls">
+            <span class="legend-chip spo2-legend"><span class="dot"></span> SpO2 (%)</span>
+            <span class="legend-chip hr-legend"><span class="dot"></span> Pulse (BPM)</span>
+            <div class="time-range-selector">
+              <button class="time-btn active" data-limit="30">Live 30m</button>
+              <button class="time-btn" data-limit="60">1 Hour</button>
+              <button class="time-btn" data-limit="120">2 Hours</button>
+            </div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="vitalsCombinedChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card temp-chart-card">
+        <div class="chart-header">
+          <div class="chart-title">
+            <span class="chart-icon">🌡️</span>
+            <h3>Pyrexia / Temperature Curve (°C)</h3>
+          </div>
+          <span class="fever-threshold-label">Threshold: 38.0°C</span>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="temperatureChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Split: Interactive Testing Demonstration + Clinical Alert Log -->
+    <section class="bottom-grid">
+      <!-- Clinical Alerts Log Panel -->
+      <div class="panel-card alerts-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="panel-icon">🔔</span>
+            <h3>Clinical Patient Event Log</h3>
+          </div>
+          <span class="active-badge" id="activeAlertCount">1 Active</span>
+        </div>
+        <div class="alerts-list-wrapper" id="alertsListContainer">
+          <!-- Dynamic Alert Cards -->
+        </div>
+      </div>
+
+      <!-- Live Demonstration & Sensor Simulator Control Panel -->
+      <div class="panel-card demo-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="panel-icon">🧪</span>
+            <h3>Examiner Testing & Sensor Simulator Control</h3>
+          </div>
+          <span class="demo-tag">ESP32 Telemetry Injector</span>
+        </div>
+        <div class="demo-body">
+          <p class="demo-intro">
+            Simulate live clinical COVID-19 scenarios directly into the PostgreSQL database and watch the dashboard react in real time:
+          </p>
+          <div class="demo-scenarios-grid">
+            <button class="scenario-btn normal-btn" onclick="injectScenario('normal')">
+              <span class="scenario-icon">🟢</span>
+              <div class="scenario-details">
+                <strong>Stable Recovery</strong>
+                <small>SpO2: 98% • HR: 74 • Temp: 36.8°C</small>
+              </div>
+            </button>
+
+            <button class="scenario-btn hypoxia-btn" onclick="injectScenario('hypoxia')">
+              <span class="scenario-icon">🚨</span>
+              <div class="scenario-details">
+                <strong>COVID Silent Hypoxia Drop</strong>
+                <small>SpO2: 88.5% (Triggers Emergency)</small>
+              </div>
+            </button>
+
+            <button class="scenario-btn fever-btn" onclick="injectScenario('fever')">
+              <span class="scenario-icon">🔥</span>
+              <div class="scenario-details">
+                <strong>Severe Fever Spike</strong>
+                <small>Temp: 39.2°C • HR: 112 BPM</small>
+              </div>
+            </button>
+
+            <button class="scenario-btn tachy-btn" onclick="injectScenario('tachycardia')">
+              <span class="scenario-icon">💓</span>
+              <div class="scenario-details">
+                <strong>Cardiac Tachycardia</strong>
+                <small>HR: 132 BPM • Dyspnea: 26 RPM</small>
+              </div>
+            </button>
+          </div>
+
+          <!-- Custom Manual Telemetry Form -->
+          <div class="custom-inject-form">
+            <div class="form-title">Manual Parameter Calibration:</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>SpO2 (%)</label>
+                <input type="number" id="inputSpO2" value="95.5" min="70" max="100" step="0.5">
+              </div>
+              <div class="form-group">
+                <label>Pulse (BPM)</label>
+                <input type="number" id="inputHR" value="82" min="40" max="200" step="1">
+              </div>
+              <div class="form-group">
+                <label>Temp (°C)</label>
+                <input type="number" id="inputTemp" value="37.4" min="34" max="42" step="0.1">
+              </div>
+              <button class="btn-custom-send" onclick="sendCustomTelemetry()">Send to Gateway</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-left">
+      <span>COVID-19 Patient Health Telemetry System • ESP32 + PostgreSQL 16 + Express + WebSockets</span>
+    </div>
+    <div class="footer-right">
+      <span>Auto-refresh Rate: <strong>1.5s</strong></span>
+      <span>•</span>
+      <span>Data Stream: <strong>Active</strong></span>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

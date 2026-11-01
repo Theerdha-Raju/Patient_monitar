@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database Service
+  postgres:
+    image: postgres:16-alpine
+    container_name: covid_postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: covid_monitor_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d covid_monitor_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - covid_network
+
+  # 2. FastAPI REST Telemetry Gateway & WebSocket Service
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: covid_health_monitor_api
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgrespassword
+      PGDATABASE: covid_monitor_db
+      DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/covid_monitor_db
+      PORT: 5000
+      HOST: 0.0.0.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+    networks:
+      - covid_network
+
+  # 3. Real-Time React Telemetry Dashboard (Served via Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: covid_health_monitor_dashboard
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - covid_network
+
+networks:
+  covid_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
