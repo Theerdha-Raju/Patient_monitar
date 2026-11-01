@@ -817,8 +817,7 @@ async function startServer() {
       console.log(`====================================================`);
     });
   } catch (err) {
-    console.error('[Server Start Failure]:', err.message);
-    process.exit(1);
+    console.error('[Server Database Warning]:', err.message);
   }
 }
 
