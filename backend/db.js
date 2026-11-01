@@ -2,17 +2,26 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 // PostgreSQL Connection Pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  host: process.env.PGHOST || 'localhost',
-  port: parseInt(process.env.PGPORT || '5432', 10),
-  user: process.env.PGUSER || 'postgres',
-  password: process.env.PGPASSWORD !== undefined ? process.env.PGPASSWORD : '',
-  database: process.env.PGDATABASE || 'covid_monitor_db',
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
-});
+const poolConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    }
+  : {
+      host: process.env.PGHOST || 'localhost',
+      port: parseInt(process.env.PGPORT || '5432', 10),
+      user: process.env.PGUSER || 'postgres',
+      password: process.env.PGPASSWORD !== undefined ? process.env.PGPASSWORD : '',
+      database: process.env.PGDATABASE || 'covid_monitor_db',
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+    };
+
+const pool = new Pool(poolConfig);
 
 pool.on('error', (err) => {
   console.error('[PostgreSQL Pool Error]:', err.message);
