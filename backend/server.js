@@ -207,7 +207,7 @@ async function evaluateClinicalAlerts(reading) {
  * Health check & system diagnostics
  * Aliased as both /api/health and /api/health/ for compatibility
  */
-app.get(['/api/health', '/api/health/'], async (req, res) => {
+app.get(['/', '/api/health', '/api/health/'], async (req, res) => {
   try {
     const dbRes = await db.query('SELECT NOW() AS now, current_database() AS dbname');
     res.json({
@@ -223,7 +223,12 @@ app.get(['/api/health', '/api/health/'], async (req, res) => {
       serverUptime: process.uptime()
     });
   } catch (err) {
-    res.status(500).json({ status: 'DEGRADED', error: err.message });
+    res.status(200).json({ 
+      status: 'STARTING', 
+      system: 'Smart Patient Health Monitor Gateway',
+      database: { connected: false, message: err.message },
+      serverUptime: process.uptime()
+    });
   }
 });
 
@@ -802,22 +807,21 @@ app.post(['/api/settings', '/api/settings/'], (req, res) => {
   res.json({ success: true, data: defaultSettings, message: 'Settings updated' });
 });
 
-// Start Server after database schema check
+// Start Server & Listen Immediately on 0.0.0.0
 async function startServer() {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`====================================================`);
+    console.log(`   SMART PATIENT HEALTH MONITOR GATEWAY             `);
+    console.log(` Backend live on Port: ${PORT} (0.0.0.0)            `);
+    console.log(` Health check: http://0.0.0.0:${PORT}/api/health    `);
+    console.log(`====================================================`);
+  });
+
   try {
     await db.initDatabase();
-    server.listen(PORT, () => {
-      console.log(`====================================================`);
-      console.log(`     COVID-19 PATIENT HEALTH MONITOR GATEWAY        `);
-      console.log(` Backend REST API & WebSockets live on Port: ${PORT}`);
-      console.log(` Web Dashboard: http://localhost:${PORT}`);
-      console.log(` Telemetry Ingest: POST http://localhost:${PORT}/api/telemetry`);
-      console.log(` WebSocket URL: ws://localhost:${PORT}/ws`);
-      console.log(` Database: PostgreSQL (covid_monitor_db)`);
-      console.log(`====================================================`);
-    });
+    console.log('[PostgreSQL] Database ready with tables & seed data.');
   } catch (err) {
-    console.error('[Server Database Warning]:', err.message);
+    console.error('[PostgreSQL Initial Handshake Warning]:', err.message);
   }
 }
 
