@@ -44,6 +44,16 @@ async def on_startup():
     init_db()
 
 
+@app.get("/")
+async def root():
+    return {
+        "status": "online",
+        "service": "Smart Health Monitoring System API",
+        "documentation": "/docs",
+        "health": "/api/health"
+    }
+
+
 @app.get("/api/health")
 async def health_check():
     return {

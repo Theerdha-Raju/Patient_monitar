@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Default cloud backend URL on Render
-const DEFAULT_CLOUD_API = 'https://patient-monitar-i46y.onrender.com';
+const DEFAULT_CLOUD_API = 'https://patient-monitar-dldf.onrender.com';
 
 // Base URL: In production cloud (non-localhost), automatically target your Render backend URL
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || (
