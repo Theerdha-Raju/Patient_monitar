@@ -1,7 +1,14 @@
 import axios from 'axios';
 
-// Base URL: Vite proxy forwards /api → Node.js Express backend (port 5000)
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+// Default cloud backend URL on Render
+const DEFAULT_CLOUD_API = 'https://patient-monitar-i46y.onrender.com';
+
+// Base URL: In production cloud (non-localhost), automatically target your Render backend URL
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+  typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? DEFAULT_CLOUD_API
+    : ''
+);
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
