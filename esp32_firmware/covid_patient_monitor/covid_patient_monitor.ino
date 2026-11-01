@@ -34,6 +34,7 @@
  */
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <Wire.h>
 #include <ArduinoJson.h>
@@ -50,7 +51,7 @@ const char* WIFI_SSID     = "Galaxy M311AC5";         // Replace with your WiFi 
 const char* WIFI_PASSWORD = "Itz_theerdha";           // Replace with your WiFi Password
 
 // Backend Gateway URL (Configured to your PC's IP address on Wi-Fi)
-const char* BACKEND_SERVER_URL = "http://192.168.196.204:5000/api/readings";
+const char* BACKEND_SERVER_URL = "https://patient-monitar-dldf.onrender.com/api/readings";
 
 // Patient & Device Identifiers
 const char* PATIENT_ID = "P001";                      // Target Patient ID
@@ -435,7 +436,13 @@ void transmitTelemetry(float hr, float spo2, float temp, float resp) {
   digitalWrite(STATUS_LED_PIN, HIGH);
 
   HTTPClient http;
-  http.begin(BACKEND_SERVER_URL);
+  WiFiClientSecure secureClient;
+  if (String(BACKEND_SERVER_URL).startsWith("https://")) {
+    secureClient.setInsecure();
+    http.begin(secureClient, BACKEND_SERVER_URL);
+  } else {
+    http.begin(BACKEND_SERVER_URL);
+  }
   http.addHeader("Content-Type", "application/json");
   http.setTimeout(4000); // 4 seconds timeout
 
