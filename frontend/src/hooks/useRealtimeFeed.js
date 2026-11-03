@@ -2,9 +2,15 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { generateMockReadingsForAllPatients } from '../utils/mockData.js';
 import { classifySpO2, classifyHeartRate, classifyTemperature, overallStatus } from '../utils/vitals.js';
 
-const BACKEND_HOST = (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
-  ? 'patient-monitar-dldf.onrender.com'
-  : (typeof window !== 'undefined' ? window.location.host : 'localhost:5000');
+const rawEnvBackend = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) || '';
+const cleanEnvHost = rawEnvBackend.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+const isCleanEnvHostValid = cleanEnvHost && !cleanEnvHost.includes('xxxx') && !cleanEnvHost.includes('localhost');
+
+const BACKEND_HOST = isCleanEnvHostValid
+  ? cleanEnvHost
+  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+    ? 'patient-monitar-dldf.onrender.com'
+    : (typeof window !== 'undefined' ? window.location.host : 'localhost:5000');
 
 const WS_URL = `${typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'}://${BACKEND_HOST}/ws`;
 const POLL_MS  = 3000;

@@ -8,7 +8,21 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (request, socket, head) => {
+  try {
+    const host = request.headers.host || 'localhost:5000';
+    const url = new URL(request.url, 'http://' + host);
+    if (url.pathname === '/ws' || url.pathname === '/ws/readings' || url.pathname.startsWith('/ws')) {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+      return;
+    }
+  } catch (err) {}
+  socket.destroy();
+});
 
 const PORT = process.env.PORT || 5000;
 

@@ -5,6 +5,5 @@ echo =======================================================================
 echo    ESP32 TELEMETRY SIMULATOR - COVID QUARANTINE ISOLATION WARDS
 echo =======================================================================
 cd /d "%~dp0"
-node simulator.js
-
+python multi_simulator.py
 pause

@@ -55,6 +55,7 @@ async def root():
 
 
 @app.get("/api/health")
+@app.get("/api/health/")
 async def health_check():
     return {
         "status": "healthy",
@@ -71,8 +72,9 @@ async def telemetry_alias(payload: readings.ReadingCreate):
 
 
 # -------------------------------------------------------------------------
-# WebSocket Endpoint: WS /ws/readings
+# WebSocket Endpoint: WS /ws and WS /ws/readings
 # -------------------------------------------------------------------------
+@app.websocket("/ws")
 @app.websocket("/ws/readings")
 async def websocket_readings(websocket: WebSocket):
     await manager.connect(websocket)

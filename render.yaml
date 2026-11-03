@@ -29,10 +29,7 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: patient-monitor-backend
-          property: host
+        value: https://patient-monitar-dldf.onrender.com
 
 databases:
   - name: patient-monitor-db
